@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="hr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Dnevni unos proizvoda</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <h1>Dnevni unos proizvoda</h1>
+        <p id="currentDate" class="app__date"></p>
+      </header>
+
+      <section class="card">
+        <label for="branchSelect" class="field-label">Poslovnica</label>
+        <select id="branchSelect" class="field-input"></select>
+      </section>
+
+      <section class="card products-card">
+        <h2>Proizvodi</h2>
+        <p class="helper">Unesite količinu za svaki proizvod (prazno = 0).</p>
+        <div id="productsList" class="products-list"></div>
+      </section>
+
+      <p id="statusMessage" class="status-message" role="status" aria-live="polite"></p>
+    </main>
+
+    <footer class="sticky-footer">
+      <button id="saveButton" class="save-button" type="button">Spremi podatke</button>
+    </footer>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
