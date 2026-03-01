@@ -83,6 +83,23 @@ body {
   padding-right: 4px;
 }
 
+
+.segment-divider {
+  padding: 6px 0;
+}
+
+.segment-divider__space {
+  height: 10px;
+}
+
+.segment-divider__label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .product-row {
   display: grid;
   grid-template-columns: 1fr 96px;

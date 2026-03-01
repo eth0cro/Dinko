@@ -67,7 +67,7 @@ router.post('/submit', async (req, res, next) => {
 
     for (const entry of normalizedEntries) {
       if (!Number.isInteger(entry.productIndex) || entry.productIndex < 0 || entry.productIndex >= PRODUCTS_COUNT) {
-        return res.status(400).json({ error: 'productIndex mora biti cijeli broj između 0 i 62.' });
+        return res.status(400).json({ error: 'productIndex mora biti cijeli broj unutar raspona dostupnih proizvoda.' });
       }
 
       if (!Number.isFinite(entry.quantity) || entry.quantity < 0) {

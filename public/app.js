@@ -25,6 +25,24 @@ function setStatus(message, type = 'ok') {
   statusMessage.classList.add(type === 'error' ? 'status-message--error' : 'status-message--ok');
 }
 
+function createSegmentDivider(label) {
+  const divider = document.createElement('div');
+  divider.className = 'segment-divider';
+
+  const topSpace = document.createElement('div');
+  topSpace.className = 'segment-divider__space';
+
+  const text = document.createElement('div');
+  text.className = 'segment-divider__label';
+  text.textContent = label;
+
+  const bottomSpace = document.createElement('div');
+  bottomSpace.className = 'segment-divider__space';
+
+  divider.append(topSpace, text, bottomSpace);
+  return divider;
+}
+
 function createProductRow(product) {
   const row = document.createElement('label');
   row.className = 'product-row';
@@ -59,7 +77,19 @@ function createProductRow(product) {
 
 function renderProducts(items) {
   productsList.innerHTML = '';
-  items.forEach((product) => productsList.appendChild(createProductRow(product)));
+
+  let previousSegmentLabel = null;
+
+  items.forEach((product) => {
+    const currentSegmentLabel = product.segmentLabel || null;
+
+    if (currentSegmentLabel && currentSegmentLabel !== previousSegmentLabel) {
+      productsList.appendChild(createSegmentDivider(currentSegmentLabel));
+    }
+
+    productsList.appendChild(createProductRow(product));
+    previousSegmentLabel = currentSegmentLabel;
+  });
 }
 
 async function fetchBranches() {

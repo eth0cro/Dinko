@@ -1,8 +1,22 @@
 const { google } = require('googleapis');
 
-const PRODUCT_RANGE_START_ROW = 5;
-const PRODUCT_RANGE_END_ROW = 67;
-const PRODUCTS_COUNT = PRODUCT_RANGE_END_ROW - PRODUCT_RANGE_START_ROW + 1;
+const PRODUCT_COLUMN = 'B';
+const FIRST_DAILY_COLUMN_NUMBER = 3; // C
+
+const PRODUCT_SEGMENTS = [
+  { startRow: 6, endRow: 35, label: null },
+  { startRow: 38, endRow: 67, label: 'Ostatak' }
+];
+
+const PRODUCT_ROWS = PRODUCT_SEGMENTS.flatMap((segment) => {
+  const rows = [];
+  for (let row = segment.startRow; row <= segment.endRow; row += 1) {
+    rows.push(row);
+  }
+  return rows;
+});
+
+const PRODUCTS_COUNT = PRODUCT_ROWS.length;
 
 function columnNumberToLetter(columnNumber) {
   let temp = columnNumber;
@@ -22,7 +36,7 @@ function dayToColumn(day) {
     throw new Error('Neispravan dan u mjesecu. Dozvoljen raspon je 1-31.');
   }
 
-  const columnNumber = day + 1;
+  const columnNumber = FIRST_DAILY_COLUMN_NUMBER + (day - 1);
   return columnNumberToLetter(columnNumber);
 }
 
@@ -71,30 +85,52 @@ async function getBranches() {
 
 async function getProducts(branch) {
   const sheets = getSheetsClient();
-  const range = formatBranchRange(branch, `A${PRODUCT_RANGE_START_ROW}:A${PRODUCT_RANGE_END_ROW}`);
 
-  const response = await sheets.spreadsheets.values.get({
+  const ranges = PRODUCT_SEGMENTS.map((segment) =>
+    formatBranchRange(branch, `${PRODUCT_COLUMN}${segment.startRow}:${PRODUCT_COLUMN}${segment.endRow}`)
+  );
+
+  const response = await sheets.spreadsheets.values.batchGet({
     spreadsheetId: process.env.SHEET_ID,
-    range
+    ranges
   });
 
-  const values = response.data.values || [];
+  const valuesByRange = response.data.valueRanges || [];
+  const products = [];
 
-  return Array.from({ length: PRODUCTS_COUNT }, (_, index) => {
-    const row = values[index] || [];
-    const productName = (row[0] || '').trim();
+  PRODUCT_SEGMENTS.forEach((segment, segmentIndex) => {
+    const values = (valuesByRange[segmentIndex] && valuesByRange[segmentIndex].values) || [];
 
-    return {
-      productIndex: index,
-      name: productName
-    };
+    for (let i = 0; i <= segment.endRow - segment.startRow; i += 1) {
+      const rowNumber = segment.startRow + i;
+      const productName = ((values[i] && values[i][0]) || '').trim();
+
+      products.push({
+        productIndex: products.length,
+        name: productName,
+        rowNumber,
+        segmentLabel: segment.label
+      });
+    }
   });
+
+  return products;
 }
 
-function buildColumnValues(entriesMap) {
-  return Array.from({ length: PRODUCTS_COUNT }, (_, index) => {
-    const quantity = entriesMap.get(index) ?? 0;
-    return [quantity];
+function buildUpdateSegments(branch, column, entriesMap) {
+  return PRODUCT_SEGMENTS.map((segment) => {
+    const values = [];
+
+    for (let row = segment.startRow; row <= segment.endRow; row += 1) {
+      const productListIndex = PRODUCT_ROWS.indexOf(row);
+      const quantity = entriesMap.get(productListIndex) ?? 0;
+      values.push([quantity]);
+    }
+
+    return {
+      range: formatBranchRange(branch, `${column}${segment.startRow}:${column}${segment.endRow}`),
+      values
+    };
   });
 }
 
@@ -125,16 +161,15 @@ async function submitDailyEntries({ branch, date, entries }) {
     entriesMap.set(index, quantity);
   }
 
-  const values = buildColumnValues(entriesMap);
-  const range = formatBranchRange(branch, `${column}${PRODUCT_RANGE_START_ROW}:${column}${PRODUCT_RANGE_END_ROW}`);
-
+  const data = buildUpdateSegments(branch, column, entriesMap);
   const sheets = getSheetsClient();
 
-  await sheets.spreadsheets.values.update({
+  await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: process.env.SHEET_ID,
-    range,
-    valueInputOption: 'RAW',
-    requestBody: { values }
+    requestBody: {
+      valueInputOption: 'RAW',
+      data
+    }
   });
 
   return {
@@ -142,8 +177,8 @@ async function submitDailyEntries({ branch, date, entries }) {
     date,
     day,
     column,
-    updatedRange: range,
-    rowsUpdated: values.length
+    updatedRanges: data.map((item) => item.range),
+    rowsUpdated: PRODUCTS_COUNT
   };
 }
 
@@ -156,27 +191,36 @@ async function getDailyValues(branch, date) {
 
   const day = parsedDate.getDate();
   const column = dayToColumn(day);
-  const range = formatBranchRange(branch, `${column}${PRODUCT_RANGE_START_ROW}:${column}${PRODUCT_RANGE_END_ROW}`);
-
   const sheets = getSheetsClient();
-  const response = await sheets.spreadsheets.values.get({
+
+  const ranges = PRODUCT_SEGMENTS.map((segment) =>
+    formatBranchRange(branch, `${column}${segment.startRow}:${column}${segment.endRow}`)
+  );
+
+  const response = await sheets.spreadsheets.values.batchGet({
     spreadsheetId: process.env.SHEET_ID,
-    range
+    ranges
   });
 
-  const values = response.data.values || [];
+  const valuesByRange = response.data.valueRanges || [];
+  const quantities = [];
 
-  return Array.from({ length: PRODUCTS_COUNT }, (_, index) => {
-    const cell = values[index] || [];
-    const rawValue = cell[0];
-    const numeric = Number(rawValue);
-    return Number.isFinite(numeric) ? numeric : 0;
+  PRODUCT_SEGMENTS.forEach((segment, segmentIndex) => {
+    const values = (valuesByRange[segmentIndex] && valuesByRange[segmentIndex].values) || [];
+
+    for (let i = 0; i <= segment.endRow - segment.startRow; i += 1) {
+      const rawValue = (values[i] && values[i][0]) || 0;
+      const numeric = Number(rawValue);
+      quantities.push(Number.isFinite(numeric) ? numeric : 0);
+    }
   });
+
+  return quantities;
 }
 
 module.exports = {
-  PRODUCT_RANGE_START_ROW,
-  PRODUCT_RANGE_END_ROW,
+  PRODUCT_SEGMENTS,
+  PRODUCT_ROWS,
   PRODUCTS_COUNT,
   dayToColumn,
   getBranches,

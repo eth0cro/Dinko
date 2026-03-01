@@ -7,9 +7,9 @@ Produkcijsko rješenje za mobilnu web aplikaciju za dnevni unos količina proizv
 - Mobilna forma bez login/PIN sustava
 - Odabir poslovnice (tab/sheet)
 - Prikaz današnjeg datuma
-- Učitavanje proizvoda iz `A5:A67`
+- Učitavanje proizvoda iz dva segmenta: `B6:B35` i `B38:B67` (s odjeljkom "Ostatak")
 - Unos količina (brojevi >= 0, prazno = 0)
-- Spremanje dnevnih unosa u stupac koji odgovara danu u mjesecu (`1 -> B`, `2 -> C`, ...)
+- Spremanje dnevnih unosa u stupac koji odgovara danu u mjesecu (`1 -> C`, `2 -> D`, ...)
 - Overwrite postojećih dnevnih vrijednosti je dozvoljen
 - Formula stupci (`Zaduženo`, `Vraćeno`, `Razlika`) ostaju netaknuti
 - Bonus: export u Excel za period
@@ -37,7 +37,7 @@ Produkcijsko rješenje za mobilnu web aplikaciju za dnevni unos količina proizv
 ## API endpointi
 
 - `GET /api/branches` → lista poslovnica (sheet tabovi)
-- `GET /api/products?branch=Ćiro` → proizvodi iz `A5:A67`
+- `GET /api/products?branch=Ćiro` → proizvodi iz `B6:B35` i `B38:B67`
 - `POST /api/submit` → upis dnevnih količina u odgovarajući stupac dana
 - `GET /api/export?branch=Ćiro&from=YYYY-MM-DD&to=YYYY-MM-DD` → preuzimanje `.xlsx` izvještaja
 - `GET /health` → health-check
@@ -187,6 +187,6 @@ sudo systemctl restart nginx
 
 ## Napomena o formulama
 
-Backend zapisuje isključivo u dnevne stupce za raspon redaka `5-67`.
+Backend zapisuje isključivo u dnevne stupce za retke proizvoda `6-35` i `38-67`.
 
 Nema izmjena formula ni pomoćnih stupaca (`Zaduženo`, `Vraćeno`, `Razlika`).
